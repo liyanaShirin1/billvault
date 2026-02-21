@@ -4,46 +4,49 @@ import DashboardLayout from "./layout/DashboardLayout";
 import BillModal from "./components/BillModal";
 
 function App() {
-
+  // ================= USER STATE =================
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
   });
 
+  // ================= APP STATE =================
   const [page, setPage] = useState("dashboard");
   const [open, setOpen] = useState(false);
   const [bills, setBills] = useState([]);
   const [displayBills, setDisplayBills] = useState([]);
 
-  // Load bills
+  // ================= LOAD BILLS ON MOUNT =================
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("bills")) || [];
     setBills(stored);
+  }, []);
 
+  // ================= FILTER BILLS BASED ON ROLE =================
+  useEffect(() => {
     if (user?.role === "club") {
       setDisplayBills(
-        stored.filter((bill) => bill.clubName === user.clubName)
+        bills.filter((bill) => bill.clubName === user.clubName)
       );
     } else {
-      setDisplayBills(stored);
+      setDisplayBills(bills);
     }
-  }, [user]);
+  }, [bills, user]);
 
-  // Add bill
+  // ================= ADD BILL =================
   const addBill = (bill) => {
-    const updated = [...bills, bill];
+    const newBill = {
+      ...bill,
+      id: Date.now(), // unique id
+      clubName: user.clubName,
+    };
+
+    const updated = [...bills, newBill];
     setBills(updated);
     localStorage.setItem("bills", JSON.stringify(updated));
-
-    if (user?.role === "club") {
-      setDisplayBills(
-        updated.filter((b) => b.clubName === user.clubName)
-      );
-    } else {
-      setDisplayBills(updated);
-    }
   };
 
+  // ================= LOGOUT =================
   const logout = () => {
     localStorage.removeItem("user");
     setUser(null);
@@ -54,49 +57,57 @@ function App() {
   }
 
   return (
-    <DashboardLayout setPage={setPage}>
-
-      <button onClick={logout} style={{ marginBottom: "20px" }}>
+    <DashboardLayout user={user} setPage={setPage} page={page}>
+      <button
+        onClick={logout}
+        style={{
+          marginBottom: "20px",
+          padding: "8px 14px",
+          background: "#ff4d4f",
+          color: "white",
+          border: "none",
+          borderRadius: "5px",
+          cursor: "pointer"
+        }}
+      >
         Logout
       </button>
 
-      {/* DASHBOARD */}
+      {/* ================= DASHBOARD ================= */}
       {page === "dashboard" && (
         <>
           <h1>Dashboard</h1>
           <p>Total Bills: {displayBills.length}</p>
           <p>
             Total Amount: ₹
-            {displayBills.reduce(
-              (sum, bill) => sum + Number(bill.amount),
-              0
-            )}
+            {displayBills
+              .reduce((sum, bill) => sum + Number(bill.amount), 0)
+              .toLocaleString("en-IN")}
           </p>
         </>
       )}
 
-      {/* UPLOAD */}
-      {page === "upload" && user?.role === "club" && (
+      {/* ================= UPLOAD ================= */}
+      {page === "upload" && user.role === "club" && (
         <>
           <h1>Upload Bill</h1>
 
           {open && (
             <BillModal
               closeModal={() => setOpen(false)}
-              addBill={(bill) =>
-                addBill({ ...bill, clubName: user.clubName })
-              }
+              addBill={addBill}
             />
           )}
 
           <button
             onClick={() => setOpen(true)}
             style={{
-              padding: "10px",
+              padding: "10px 16px",
               background: "#8e2de2",
               color: "white",
               border: "none",
-              borderRadius: "5px"
+              borderRadius: "5px",
+              cursor: "pointer"
             }}
           >
             Upload New Bill
@@ -104,7 +115,7 @@ function App() {
         </>
       )}
 
-      {/* ALL BILLS */}
+      {/* ================= ALL BILLS ================= */}
       {page === "all" && (
         <>
           <h1>All Bills</h1>
@@ -125,13 +136,15 @@ function App() {
                 <p><strong>Club:</strong> {bill.clubName}</p>
                 <p><strong>Event:</strong> {bill.eventName}</p>
                 <p><strong>Date:</strong> {bill.eventDate}</p>
-                <p><strong>Amount:</strong> ₹{bill.amount}</p>
+                <p>
+                  <strong>Amount:</strong> ₹
+                  {Number(bill.amount).toLocaleString("en-IN")}
+                </p>
               </div>
             ))
           )}
         </>
       )}
-
     </DashboardLayout>
   );
 }
