@@ -30,6 +30,18 @@ function App() {
   }, [user]);
 
   // Add bill
+  const sortBills = (type) => {
+  let sorted = [...displayBills];
+
+  if (type === "low") {
+    sorted.sort((a, b) => Number(a.amount) - Number(b.amount));
+  } else if (type === "high") {
+    sorted.sort((a, b) => Number(b.amount) - Number(a.amount));
+  }
+
+  setDisplayBills(sorted);
+};
+
   const addBill = (bill) => {
     const updated = [...bills, bill];
     setBills(updated);
@@ -54,11 +66,7 @@ function App() {
   }
 
   return (
-    <DashboardLayout setPage={setPage}>
-
-      <button onClick={logout} style={{ marginBottom: "20px" }}>
-        Logout
-      </button>
+    <DashboardLayout setPage={setPage} logout={logout}>
 
       {/* DASHBOARD */}
       {page === "dashboard" && (
@@ -109,6 +117,37 @@ function App() {
         <>
           <h1>All Bills</h1>
 
+<div style={{ marginBottom: "20px" }}>
+  <button
+    onClick={() => sortBills("low")}
+    style={{
+      marginRight: "10px",
+      padding: "8px",
+      background: "#444",
+      color: "white",
+      border: "none",
+      borderRadius: "5px",
+      cursor: "pointer"
+    }}
+  >
+    Low → High
+  </button>
+
+  <button
+    onClick={() => sortBills("high")}
+    style={{
+      padding: "8px",
+      background: "#444",
+      color: "white",
+      border: "none",
+      borderRadius: "5px",
+      cursor: "pointer"
+    }}
+  >
+    High → Low
+  </button>
+</div>
+
           {displayBills.length === 0 ? (
             <p>No bills found.</p>
           ) : (
@@ -121,7 +160,19 @@ function App() {
                   borderRadius: "8px",
                   marginBottom: "15px"
                 }}
+
               >
+                {bill.image && (
+  <img
+    src={bill.image}
+    alt="Bill"
+    style={{
+      width: "200px",
+      marginTop: "10px",
+      borderRadius: "8px"
+    }}
+  />
+)}
                 <p><strong>Club:</strong> {bill.clubName}</p>
                 <p><strong>Event:</strong> {bill.eventName}</p>
                 <p><strong>Date:</strong> {bill.eventDate}</p>
