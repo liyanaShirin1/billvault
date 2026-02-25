@@ -1,87 +1,54 @@
 import { useState } from "react";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase/firebaseConfig";
+import { useNavigate, Link } from "react-router-dom";
 
-function Login({ setUser }) {
+function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
-  // Hardcoded users (for demo)
- const handleLogin = () => {
-  if (!email || !password) {
-    alert("Enter email and password");
-    return;
-  }
+  const handleLogin = async (e) => {
+    e.preventDefault(); // 🚨 prevents page reload
 
-  // Default test password
-  if (password !== "1234") {
-    alert("Wrong password (Use 1234)");
-    return;
-  }
-
-  // Only allow gmail accounts
-  if (!email.endsWith("@gmail.com")) {
-    alert("Only Gmail accounts allowed");
-    return;
-  }
-
-  const userData = {
-    email,
-    role: email === "authority@gmail.com" ? "authority" : "club",
-    clubName: email.split("@")[0]
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate("/dashboard");
+    } catch (error) {
+      alert(error.message);
+    }
   };
 
-  localStorage.setItem("user", JSON.stringify(userData));
-  setUser(userData);
-};
   return (
-    <div
-      style={{
-        height: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "#121212",
-        color: "white"
-      }}
-    >
-      <div
-        style={{
-          background: "#1f1f1f",
-          padding: "40px",
-          borderRadius: "10px",
-          textAlign: "center",
-          width: "300px"
-        }}
-      >
-        <h2>Login</h2>
+    <div>
+      <h2>Login</h2>
 
+      {/* 🔥 FORM handles Enter key automatically */}
+      <form onSubmit={handleLogin}>
         <input
-          placeholder="Email eg:billvault06@gmail.com"
+          type="email"
+          required
+          placeholder="Email"
+          value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={{ width: "100%", padding: "8px", marginBottom: "15px" }}
         />
 
         <input
           type="password"
           placeholder="Password"
+          value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={{ width: "100%", padding: "8px", marginBottom: "15px" }}
         />
 
-        <button
-          onClick={handleLogin}
-          style={{
-            width: "100%",
-            padding: "10px",
-            background: "#8e2de2",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer"
-          }}
-        >
+        {/* type="submit" is important */}
+        <button type="submit">
           Login
         </button>
-      </div>
+      </form>
+
+      <p>
+        Don't have an account? <Link to="/signup">Sign Up</Link>
+      </p>
     </div>
   );
 }

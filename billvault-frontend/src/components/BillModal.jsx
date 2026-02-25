@@ -1,8 +1,8 @@
 import { useState } from "react";
 
 function BillModal({ closeModal, addBill }) {
+
   const [form, setForm] = useState({
-    clubName: "",
     eventName: "",
     eventDate: "",
     amount: "",
@@ -21,13 +21,13 @@ function BillModal({ closeModal, addBill }) {
     reader.onload = () => {
       setForm((prev) => ({
         ...prev,
-        image: reader.result
+        image: reader.result   // base64
       }));
     };
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!form.image) {
@@ -36,13 +36,12 @@ function BillModal({ closeModal, addBill }) {
     }
 
     const newBill = {
-      id: Date.now(),
       ...form,
       amount: Number(form.amount),
-      uploadedAt: new Date().toLocaleString()
+      uploadedAt: new Date().toISOString()
     };
 
-    addBill(newBill);
+    await addBill(newBill);
     closeModal();
   };
 
@@ -52,15 +51,42 @@ function BillModal({ closeModal, addBill }) {
         <h2>Upload Bill</h2>
 
         <form onSubmit={handleSubmit}>
-          <input name="clubName" placeholder="Club Name" onChange={handleChange} required />
-          <input name="eventName" placeholder="Event Name" onChange={handleChange} required />
-          <input type="date" name="eventDate" onChange={handleChange} required />
-          <input type="number" name="amount" placeholder="Amount" onChange={handleChange} required />
-          <input type="file" accept="image/*" onChange={handleFileChange} required />
+          <input
+            name="eventName"
+            placeholder="Event Name"
+            onChange={handleChange}
+            required
+          />
+
+          <input
+            type="date"
+            name="eventDate"
+            onChange={handleChange}
+            required
+          />
+
+          <input
+            type="number"
+            name="amount"
+            placeholder="Amount"
+            onChange={handleChange}
+            required
+          />
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            required
+          />
 
           <div style={{ marginTop: "15px" }}>
-            <button type="button" onClick={closeModal}>Cancel</button>
-            <button type="submit" style={{ marginLeft: "10px" }}>Save</button>
+            <button type="button" onClick={closeModal}>
+              Cancel
+            </button>
+            <button type="submit" style={{ marginLeft: "10px" }}>
+              Save
+            </button>
           </div>
         </form>
       </div>
@@ -91,5 +117,5 @@ const modalStyle = {
   gap: "10px",
   color: "white"
 };
-export default BillModal;
 
+export default BillModal;

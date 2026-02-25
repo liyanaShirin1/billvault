@@ -1,189 +1,155 @@
 import { useState, useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import DashboardLayout from "./layout/DashboardLayout";
 import BillModal from "./components/BillModal";
 
-function App() {
+import { auth } from "./firebase/firebaseConfig";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { db } from "./firebase/firebaseConfig";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where
+} from "firebase/firestore";
 
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem("user");
-    return saved ? JSON.parse(saved) : null;
-  });
+function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const [page, setPage] = useState("dashboard");
   const [open, setOpen] = useState(false);
-  const [bills, setBills] = useState([]);
   const [displayBills, setDisplayBills] = useState([]);
 
-  // Load bills
+  // 🔐 Auth Listener
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("bills")) || [];
-    setBills(stored);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
 
-    if (user?.role === "club") {
-      setDisplayBills(
-        stored.filter((bill) => bill.clubName === user.clubName)
-      );
-    } else {
-      setDisplayBills(stored);
-    }
+    return () => unsubscribe();
+  }, []);
+
+  // 📦 Fetch Bills
+  useEffect(() => {
+    const fetchBills = async () => {
+      if (!user) return;
+
+      let q;
+
+      if (user.email === "authority@gmail.com") {
+        q = query(collection(db, "bills"));
+      } else {
+        q = query(
+          collection(db, "bills"),
+          where("clubName", "==", user.email.split("@")[0])
+        );
+      }
+
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      setDisplayBills(data);
+    };
+
+    fetchBills();
   }, [user]);
 
-  // Add bill
-  const sortBills = (type) => {
-  let sorted = [...displayBills];
-
-  if (type === "low") {
-    sorted.sort((a, b) => Number(a.amount) - Number(b.amount));
-  } else if (type === "high") {
-    sorted.sort((a, b) => Number(b.amount) - Number(a.amount));
-  }
-
-  setDisplayBills(sorted);
-};
-
-  const addBill = (bill) => {
-    const updated = [...bills, bill];
-    setBills(updated);
-    localStorage.setItem("bills", JSON.stringify(updated));
-
-    if (user?.role === "club") {
-      setDisplayBills(
-        updated.filter((b) => b.clubName === user.clubName)
-      );
-    } else {
-      setDisplayBills(updated);
-    }
+  const addBill = async (bill) => {
+    await addDoc(collection(db, "bills"), bill);
   };
 
-  const logout = () => {
-    localStorage.removeItem("user");
-    setUser(null);
+  const logout = async () => {
+    await signOut(auth);
   };
 
-  if (!user) {
-    return <Login setUser={setUser} />;
-  }
+  if (loading) return <p>Loading...</p>;
 
   return (
-    <DashboardLayout setPage={setPage} logout={logout}>
+    <Routes>
 
-      {/* DASHBOARD */}
-      {page === "dashboard" && (
-        <>
-          <h1>Dashboard</h1>
-          <p>Total Bills: {displayBills.length}</p>
-          <p>
-            Total Amount: ₹
-            {displayBills.reduce(
-              (sum, bill) => sum + Number(bill.amount),
-              0
-            )}
-          </p>
-        </>
-      )}
+      {/* Default */}
+      <Route path="/" element={<Navigate to="/login" />} />
 
-      {/* UPLOAD */}
-      {page === "upload" && user?.role === "club" && (
-        <>
-          <h1>Upload Bill</h1>
+      {/* Public Routes */}
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/dashboard" /> : <Login />}
+      />
 
-          {open && (
-            <BillModal
-              closeModal={() => setOpen(false)}
-              addBill={(bill) =>
-                addBill({ ...bill, clubName: user.clubName })
-              }
-            />
-          )}
+      <Route
+        path="/signup"
+        element={user ? <Navigate to="/dashboard" /> : <Signup />}
+      />
 
-          <button
-            onClick={() => setOpen(true)}
-            style={{
-              padding: "10px",
-              background: "#8e2de2",
-              color: "white",
-              border: "none",
-              borderRadius: "5px"
-            }}
-          >
-            Upload New Bill
-          </button>
-        </>
-      )}
+      {/* Protected Dashboard */}
+      <Route
+        path="/dashboard"
+        element={
+          user ? (
+            <DashboardLayout setPage={setPage} logout={logout}>
+              {page === "dashboard" && (
+                <>
+                  <h1>Dashboard</h1>
+                  <p>Total Bills: {displayBills.length}</p>
+                  <p>
+                    Total Amount: ₹
+                    {displayBills.reduce(
+                      (sum, bill) => sum + Number(bill.amount),
+                      0
+                    )}
+                  </p>
+                </>
+              )}
 
-      {/* ALL BILLS */}
-      {page === "all" && (
-        <>
-          <h1>All Bills</h1>
+              {page === "upload" && (
+                <>
+                  <h1>Upload Bill</h1>
+                  {open && (
+                    <BillModal
+                      closeModal={() => setOpen(false)}
+                      addBill={(bill) =>
+                        addBill({
+                          ...bill,
+                          clubName: user.email.split("@")[0]
+                        })
+                      }
+                    />
+                  )}
+                  <button onClick={() => setOpen(true)}>
+                    Upload New Bill
+                  </button>
+                </>
+              )}
 
-<div style={{ marginBottom: "20px" }}>
-  <button
-    onClick={() => sortBills("low")}
-    style={{
-      marginRight: "10px",
-      padding: "8px",
-      background: "#444",
-      color: "white",
-      border: "none",
-      borderRadius: "5px",
-      cursor: "pointer"
-    }}
-  >
-    Low → High
-  </button>
-
-  <button
-    onClick={() => sortBills("high")}
-    style={{
-      padding: "8px",
-      background: "#444",
-      color: "white",
-      border: "none",
-      borderRadius: "5px",
-      cursor: "pointer"
-    }}
-  >
-    High → Low
-  </button>
-</div>
-
-          {displayBills.length === 0 ? (
-            <p>No bills found.</p>
+              {page === "all" && (
+                <>
+                  <h1>All Bills</h1>
+                  {displayBills.map((bill) => (
+                    <div key={bill.id}>
+                      <p>Club: {bill.clubName}</p>
+                      <p>Event: {bill.eventName}</p>
+                      <p>Date: {bill.eventDate}</p>
+                      <p>Amount: ₹{bill.amount}</p>
+                    </div>
+                  ))}
+                </>
+              )}
+            </DashboardLayout>
           ) : (
-            displayBills.map((bill) => (
-              <div
-                key={bill.id}
-                style={{
-                  background: "#1f1f1f",
-                  padding: "15px",
-                  borderRadius: "8px",
-                  marginBottom: "15px"
-                }}
+            <Navigate to="/login" />
+          )
+        }
+      />
 
-              >
-                {bill.image && (
-  <img
-    src={bill.image}
-    alt="Bill"
-    style={{
-      width: "200px",
-      marginTop: "10px",
-      borderRadius: "8px"
-    }}
-  />
-)}
-                <p><strong>Club:</strong> {bill.clubName}</p>
-                <p><strong>Event:</strong> {bill.eventName}</p>
-                <p><strong>Date:</strong> {bill.eventDate}</p>
-                <p><strong>Amount:</strong> ₹{bill.amount}</p>
-              </div>
-            ))
-          )}
-        </>
-      )}
-
-    </DashboardLayout>
+    </Routes>
   );
 }
 
