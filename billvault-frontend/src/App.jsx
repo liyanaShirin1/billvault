@@ -9,13 +9,18 @@ import BillModal from "./components/BillModal";
 import { auth } from "./firebase/firebaseConfig";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { db } from "./firebase/firebaseConfig";
+
 import {
   collection,
   addDoc,
   getDocs,
   query,
-  where
+  where,
+  deleteDoc,
+  doc
 } from "firebase/firestore";
+
+import { FaTrash } from "react-icons/fa";
 
 const AUTHORITY_EMAIL = "liyanashirin07@gmail.com";
 
@@ -28,29 +33,27 @@ function App() {
   const [open, setOpen] = useState(false);
   const [displayBills, setDisplayBills] = useState([]);
 
-  // 🔐 Listen for auth changes
-useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-    if (currentUser) {
-      try {
-        await currentUser.reload(); // force refresh user from Firebase
-        setUser(currentUser);
-      } catch (error) {
-        console.log("User no longer exists.");
-        await signOut(auth);
+  // 🔐 Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        try {
+          await currentUser.reload();
+          setUser(currentUser);
+        } catch (error) {
+          await signOut(auth);
+          setUser(null);
+        }
+      } else {
         setUser(null);
       }
-    } else {
-      setUser(null);
-    }
+      setLoading(false);
+    });
 
-    setLoading(false);
-  });
+    return () => unsubscribe();
+  }, []);
 
-  return () => unsubscribe();
-}, []);
-
-  // 📦 Fetch bills when user logs in
+  // 📦 Fetch Bills
   useEffect(() => {
     if (!user) return;
     fetchBills();
@@ -77,6 +80,7 @@ useEffect(() => {
     setDisplayBills(data);
   };
 
+  // ➕ Add Bill
   const addBill = async (bill) => {
     await addDoc(collection(db, "bills"), bill);
 
@@ -89,6 +93,23 @@ useEffect(() => {
     ]);
   };
 
+  // 🗑 Delete Bill
+  const deleteBill = async (id) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this bill?");
+    if (!confirmDelete) return;
+
+    try {
+      await deleteDoc(doc(db, "bills", id));
+
+      setDisplayBills(prev =>
+        prev.filter(bill => bill.id !== id)
+      );
+
+    } catch (error) {
+      console.error("Error deleting bill:", error);
+    }
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
@@ -98,10 +119,8 @@ useEffect(() => {
   return (
     <Routes>
 
-      {/* Default Route */}
       <Route path="/" element={<Navigate to="/login" />} />
 
-      {/* Login Route */}
       <Route
         path="/login"
         element={
@@ -115,35 +134,28 @@ useEffect(() => {
         }
       />
 
-      {/* ✅ Signup Route (NO REDIRECT LOGIC HERE) */}
+      <Route path="/signup" element={<Signup />} />
+
       <Route
-        path="/signup"
-        element={<Signup />}
+        path="/authority"
+        element={
+          user && user.email === AUTHORITY_EMAIL ? (
+            <AuthorityPage
+              logout={logout}
+              displayBills={displayBills}
+            />
+          ) : (
+            <Navigate to="/login" />
+          )
+        }
       />
 
-      {/* Authority Route */}
-      <Route
-  path="/authority"
-  element={
-    user && user.email === AUTHORITY_EMAIL ? (
-      <AuthorityPage
-        logout={logout}
-        displayBills={displayBills}
-      />
-    ) : (
-      <Navigate to="/login" />
-    )
-  }
-/>
-
-      {/* Club Dashboard Route */}
       <Route
         path="/dashboard"
         element={
           user && user.email !== AUTHORITY_EMAIL ? (
             <DashboardLayout setPage={setPage} logout={logout}>
 
-              {/* Dashboard */}
               {page === "dashboard" && (
                 <>
                   <h1>Dashboard</h1>
@@ -158,7 +170,6 @@ useEffect(() => {
                 </>
               )}
 
-              {/* Upload */}
               {page === "upload" && (
                 <>
                   <h1>Upload Bill</h1>
@@ -181,7 +192,6 @@ useEffect(() => {
                 </>
               )}
 
-              {/* All Bills */}
               {page === "all" && (
                 <>
                   <h1>All Bills</h1>
@@ -190,11 +200,27 @@ useEffect(() => {
                     <p>No bills found.</p>
                   ) : (
                     displayBills.map((bill) => (
-                      <div key={bill.id}>
-                        <p>Club: {bill.clubName}</p>
-                        <p>Event: {bill.eventName}</p>
-                        <p>Date: {bill.eventDate}</p>
-                        <p>Amount: ₹{bill.amount}</p>
+                      <div key={bill.id} style={cardStyle}>
+
+                        <div style={cardLeft}>
+                          <h3 style={{ margin: 0 }}>{bill.eventName}</h3>
+                          <p style={subText}>Club: {bill.clubName}</p>
+                          <p style={subText}>Date: {bill.eventDate}</p>
+                        </div>
+
+                        <div style={rightSide}>
+                          <div style={amountStyle}>
+                            ₹{bill.amount}
+                          </div>
+
+                          <button
+                            style={deleteBtn}
+                            onClick={() => deleteBill(bill.id)}
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+
                       </div>
                     ))
                   )}
@@ -213,3 +239,54 @@ useEffect(() => {
 }
 
 export default App;
+
+/* ================= STYLES ================= */
+
+const cardStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  background: "rgba(255,255,255,0.05)",
+  padding: "20px",
+  borderRadius: "12px",
+  marginBottom: "20px",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+  transition: "0.3s ease"
+};
+
+const cardLeft = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "5px"
+};
+
+const subText = {
+  margin: 0,
+  opacity: 0.7,
+  fontSize: "14px"
+};
+
+const rightSide = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-end",
+  gap: "10px"
+};
+
+const amountStyle = {
+  fontSize: "18px",
+  fontWeight: "bold",
+  color: "#9d4edd"
+};
+
+const deleteBtn = {
+  backgroundColor: "#ff4d4d",
+  border: "none",
+  color: "white",
+  padding: "8px",
+  borderRadius: "6px",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center"
+};
