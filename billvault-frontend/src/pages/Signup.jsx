@@ -1,7 +1,8 @@
 import { useState } from "react";
 import {
   createUserWithEmailAndPassword,
-  signOut
+  signOut,
+  sendEmailVerification
 } from "firebase/auth";
 import { auth } from "../firebase/firebaseConfig";
 import { useNavigate, Link } from "react-router-dom";
@@ -15,10 +16,20 @@ function Signup() {
     e.preventDefault();
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      // Send verification email
+      await sendEmailVerification(userCredential.user);
+
+      alert("Verification email sent. Please verify your email before logging in.");
+
+      // Log out user until they verify
       await signOut(auth);
 
-      alert("Account created successfully! Please login.");
       navigate("/login");
 
     } catch (error) {
@@ -83,7 +94,7 @@ export default Signup;
 const containerStyle = {
   minHeight: "100vh",
   width: "100%",
-  background: "black",
+  background: "linear-gradient(to right, #682b68, #28184c)",
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
@@ -92,20 +103,21 @@ const containerStyle = {
 
 const cardStyle = {
   background: "#eaeaea",
-  padding: "40px",
-  width: "420px",
-  borderRadius: "6px",
-  boxShadow: "0 15px 40px rgba(0,0,0,0.6)",
+  padding: "60px 30px",
+  width: "350px",
+  borderRadius: "4px",
+  boxShadow: "0 15px 30px rgba(0,0,0,0.6)",
   textAlign: "center"
 };
 
 const titleStyle = {
+  fontSize: "40px",
   letterSpacing: "4px",
   marginBottom: "5px"
 };
 
 const subtitleStyle = {
-  fontSize: "13px",
+  fontSize: "15px",
   marginBottom: "20px"
 };
 

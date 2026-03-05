@@ -43,6 +43,8 @@ function Login() {
     }
   };
 
+  
+
   return (
     <div style={containerStyle}>
       <div style={cardStyle}>
@@ -128,13 +130,13 @@ const containerStyle = {
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  background: "#0f0d0d",
+  background: "linear-gradient(to right, #682b68, #28184c)",
   fontFamily: "'Courier New', monospace"
 };
 
 const cardStyle = {
   background: "white",
-  padding: "40px 30px",
+  padding: "60px 30px",
   width: "350px",
   boxShadow: "0 15px 30px rgba(0,0,0,0.2)",
   borderRadius: "4px"
@@ -142,17 +144,17 @@ const cardStyle = {
 
 const receiptHeader = {
   textAlign: "center",
-  marginBottom: "10px"
+  marginBottom: "20px"
 };
 
 const titleStyle = {
-  fontSize: "20px",
+  fontSize: "40px",
   letterSpacing: "3px",
   marginBottom: "5px"
 };
 
 const subText = {
-  fontSize: "12px",
+  fontSize: "15px",
   color: "#666"
 };
 

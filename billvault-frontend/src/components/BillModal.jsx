@@ -5,35 +5,15 @@ function BillModal({ closeModal, addBill }) {
   const [form, setForm] = useState({
     eventName: "",
     eventDate: "",
-    amount: "",
-    image: ""
+    amount: ""
   });
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setForm((prev) => ({
-        ...prev,
-        image: reader.result   // base64
-      }));
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!form.image) {
-      alert("Please upload image");
-      return;
-    }
 
     const newBill = {
       ...form,
@@ -41,16 +21,30 @@ function BillModal({ closeModal, addBill }) {
       uploadedAt: new Date().toISOString()
     };
 
-    await addBill(newBill);
-    closeModal();
+    try {
+      await addBill(newBill);
+      closeModal();
+    } catch (error) {
+      console.error("Error saving bill:", error);
+      alert("Failed to save bill");
+    }
   };
 
   return (
     <div style={overlayStyle}>
       <div style={modalStyle}>
+
         <h2>Upload Bill</h2>
 
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px"
+          }}
+        >
+
           <input
             name="eventName"
             placeholder="Event Name"
@@ -73,22 +67,18 @@ function BillModal({ closeModal, addBill }) {
             required
           />
 
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            required
-          />
-
           <div style={{ marginTop: "15px" }}>
             <button type="button" onClick={closeModal}>
               Cancel
             </button>
+
             <button type="submit" style={{ marginLeft: "10px" }}>
               Save
             </button>
           </div>
+
         </form>
+
       </div>
     </div>
   );

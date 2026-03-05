@@ -3,88 +3,92 @@ import { useState } from "react";
 function AuthorityPage({ displayBills = [], logout }) {
 
   const [selectedClub, setSelectedClub] = useState(null);
-  const [sortedBills, setSortedBills] = useState([]);
 
-  // Get unique club names
   const clubs = [...new Set(displayBills.map(bill => bill.clubName))];
 
-  const handleClubClick = (club) => {
-    setSelectedClub(club);
-    const clubBills = displayBills.filter(
-      bill => bill.clubName === club
-    );
-    setSortedBills(clubBills);
-  };
-
-  const sortBills = (type) => {
-    let sorted = [...sortedBills];
-
-    if (type === "low") {
-      sorted.sort((a, b) => Number(a.amount) - Number(b.amount));
-    } else {
-      sorted.sort((a, b) => Number(b.amount) - Number(a.amount));
-    }
-
-    setSortedBills(sorted);
-  };
+  const filteredBills = selectedClub
+    ? displayBills.filter(bill => bill.clubName === selectedClub)
+    : displayBills;
 
   return (
     <div style={containerStyle}>
 
+      {/* HEADER */}
+
       <div style={headerStyle}>
-        <h1>Authority Panel</h1>
+        <h1 style={titleStyle}>Authority Dashboard</h1>
+
         <button onClick={logout} style={logoutBtn}>
           Logout
         </button>
       </div>
 
-      {!selectedClub ? (
-        <>
-          <h2>Clubs</h2>
 
-          {clubs.length === 0 ? (
-            <p>No clubs found.</p>
-          ) : (
-            clubs.map((club, index) => (
-              <div
-                key={index}
-                style={clubCard}
-                onClick={() => handleClubClick(club)}
-              >
-                {club}
-              </div>
-            ))
-          )}
-        </>
-      ) : (
-        <>
-          <button
-            onClick={() => setSelectedClub(null)}
-            style={backBtn}
+      {/* CLUB FILTER */}
+
+      <h2 style={sectionTitle}>Clubs</h2>
+
+      <div style={clubsRow}>
+
+        <div
+          style={{
+            ...clubPill,
+            background: selectedClub === null ? "#8e2de2" : "rgba(255,255,255,0.08)"
+          }}
+          onClick={() => setSelectedClub(null)}
+        >
+          All
+        </div>
+
+        {clubs.map((club, index) => (
+          <div
+            key={index}
+            style={{
+              ...clubPill,
+              background: selectedClub === club ? "#8e2de2" : "rgba(255,255,255,0.08)"
+            }}
+            onClick={() => setSelectedClub(club)}
           >
-            ← Back
-          </button>
+            {club}
+          </div>
+        ))}
 
-          <h2>{selectedClub} Bills</h2>
+      </div>
 
-          <div style={{ marginBottom: "20px" }}>
-            <button onClick={() => sortBills("low")} style={sortBtn}>
-              Low → High
-            </button>
-            <button onClick={() => sortBills("high")} style={sortBtn}>
-              High → Low
-            </button>
+
+      {/* BILLS */}
+
+      <h2 style={sectionTitle}>Bills</h2>
+
+      <div style={tableContainer}>
+
+        <div style={tableHeader}>
+          <span>Event</span>
+          <span>Date</span>
+          <span>Club</span>
+          <span>Amount</span>
+        </div>
+
+        {filteredBills.map((bill) => (
+
+          <div key={bill.id} style={tableRow}>
+
+            <span>{bill.eventName}</span>
+
+            <span>{bill.eventDate}</span>
+
+            <span>{bill.clubName}</span>
+
+            <span style={amountStyle}>
+              ₹{bill.amount}
+            </span>
+
           </div>
 
-          {sortedBills.map((bill) => (
-            <div key={bill.id} style={billCard}>
-              <p><strong>Event:</strong> {bill.eventName}</p>
-              <p><strong>Date:</strong> {bill.eventDate}</p>
-              <p><strong>Amount:</strong> ₹{bill.amount}</p>
-            </div>
-          ))}
-        </>
-      )}
+        ))}
+
+      </div>
+
     </div>
   );
 }
@@ -97,58 +101,72 @@ export default AuthorityPage;
 
 const containerStyle = {
   minHeight: "100vh",
-  backgroundColor: "#0e0e0e",
+  background: "linear-gradient(135deg,#1e1e2f,#2b0f3a,#0f0c29)",
   color: "white",
-  padding: "40px"
+  padding: "60px 120px"
 };
 
 const headerStyle = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: "30px"
+  marginBottom: "50px"
+};
+
+const titleStyle = {
+  fontSize: "40px"
 };
 
 const logoutBtn = {
-  padding: "8px 16px",
-  borderRadius: "6px",
-  border: "none",
-  background: "#9d4edd",
-  color: "white",
-  cursor: "pointer"
-};
-
-const clubCard = {
-  padding: "15px",
-  marginBottom: "15px",
-  background: "rgba(255,255,255,0.05)",
+  padding: "10px 20px",
   borderRadius: "8px",
-  cursor: "pointer"
-};
-
-const billCard = {
-  padding: "15px",
-  marginBottom: "15px",
-  background: "rgba(255,255,255,0.05)",
-  borderRadius: "8px"
-};
-
-const backBtn = {
-  marginBottom: "20px",
-  padding: "8px 16px",
-  borderRadius: "6px",
   border: "none",
-  background: "#444",
+  background: "linear-gradient(to right,#8e2de2,#4a00e0)",
   color: "white",
   cursor: "pointer"
 };
 
-const sortBtn = {
-  marginRight: "10px",
-  padding: "8px 14px",
-  borderRadius: "6px",
-  border: "none",
-  background: "#444",
-  color: "white",
-  cursor: "pointer"
+const sectionTitle = {
+  fontSize: "26px",
+  marginBottom: "20px"
+};
+
+const clubsRow = {
+  display: "flex",
+  gap: "15px",
+  flexWrap: "wrap",
+  marginBottom: "50px"
+};
+
+const clubPill = {
+  padding: "10px 20px",
+  borderRadius: "20px",
+  cursor: "pointer",
+  backdropFilter: "blur(10px)",
+  border: "1px solid rgba(255,255,255,0.1)"
+};
+
+const tableContainer = {
+  width: "100%",
+  maxWidth: "900px"
+};
+
+const tableHeader = {
+  display: "grid",
+  gridTemplateColumns: "1.5fr 1fr 1fr 1fr",
+  padding: "12px",
+  borderBottom: "2px solid rgba(255,255,255,0.2)",
+  fontWeight: "bold"
+};
+
+const tableRow = {
+  display: "grid",
+  gridTemplateColumns: "1.5fr 1fr 1fr 1fr",
+  padding: "12px",
+  borderBottom: "1px solid rgba(255,255,255,0.1)"
+};
+
+const amountStyle = {
+  color: "#c77dff",
+  fontWeight: "bold"
 };
